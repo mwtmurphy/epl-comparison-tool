@@ -1,0 +1,101 @@
+{
+  "filters": {},
+  "resultSet": {
+    "count": 2,
+    "first": "2025-08-17",
+    "last": "2025-05-25"
+  },
+  "competition": {
+    "id": "PL",
+    "name": "Premier League",
+    "code": "PL",
+    "type": "LEAGUE",
+    "emblem": "https://crests.football-data.org/PL.png"
+  },
+  "season": {
+    "id": 1,
+    "startDate": "2025-08-17",
+    "endDate": "2025-05-25",
+    "currentMatchday": 1
+  },
+  "matches": [
+    {
+      "id": 1,
+      "utcDate": "2025-08-17T15:00:00Z",
+      "status": "FINISHED",
+      "matchday": 1,
+      "stage": "REGULAR_SEASON",
+      "group": null,
+      "lastUpdated": "2025-08-17T17:00:00Z",
+      "homeTeam": {
+        "id": 57,
+        "name": "Arsenal",
+        "shortName": "Arsenal",
+        "tla": "ARS",
+        "crest": "https://crests.football-data.org/57.png"
+      },
+      "awayTeam": {
+        "id": 61,
+        "name": "Chelsea",
+        "shortName": "Chelsea",
+        "tla": "CHE",
+        "crest": "https://crests.football-data.org/61.png"
+      },
+      "score": {
+        "winner": "HOME_TEAM",
+        "duration": "REGULAR",
+        "fullTime": {
+          "home": 2,
+          "away": 1
+        },
+        "halfTime": {
+          "home": 1,
+          "away": 0
+        }
+      },
+      "odds": {
+        "msg": "Activate Odds-Package in User-Panel to retrieve odds."
+      },
+      "referees": []
+    },
+    {
+      "id": 2,
+      "utcDate": "2025-08-17T17:30:00Z",
+      "status": "SCHEDULED",
+      "matchday": 1,
+      "stage": "REGULAR_SEASON",
+      "group": null,
+      "lastUpdated": "2025-08-17T12:00:00Z",
+      "homeTeam": {
+        "id": 64,
+        "name": "Liverpool",
+        "shortName": "Liverpool",
+        "tla": "LIV",
+        "crest": "https://crests.football-data.org/64.png"
+      },
+      "awayTeam": {
+        "id": 65,
+        "name": "Manchester City",
+        "shortName": "Man City",
+        "tla": "MCI",
+        "crest": "https://crests.football-data.org/65.png"
+      },
+      "score": {
+        "winner": null,
+        "duration": "REGULAR",
+        "fullTime": {
+          "home": null,
+          "away": null
+        },
+        "halfTime": {
+          "home": null,
+          "away": null
+        }
+      },
+      "odds": {
+        "msg": "Activate Odds-Package in User-Panel to retrieve odds."
+      },
+      "referees": []
+    }
+  ]
+}
