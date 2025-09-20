@@ -1,0 +1,101 @@
+{
+  "filters": {},
+  "competition": {
+    "id": "ELC",
+    "name": "Championship",
+    "code": "ELC",
+    "type": "LEAGUE",
+    "emblem": "https://crests.football-data.org/ELC.png"
+  },
+  "season": {
+    "id": 2,
+    "startDate": "2024-08-10",
+    "endDate": "2025-05-04",
+    "currentMatchday": 46
+  },
+  "standings": [
+    {
+      "stage": "REGULAR_SEASON",
+      "type": "TOTAL",
+      "group": null,
+      "table": [
+        {
+          "position": 1,
+          "team": {
+            "id": 338,
+            "name": "Leicester City",
+            "shortName": "Leicester",
+            "tla": "LEI",
+            "crest": "https://crests.football-data.org/338.png"
+          },
+          "playedGames": 46,
+          "form": null,
+          "won": 31,
+          "draw": 4,
+          "lost": 11,
+          "points": 97,
+          "goalsFor": 89,
+          "goalsAgainst": 41,
+          "goalDifference": 48
+        },
+        {
+          "position": 2,
+          "team": {
+            "id": 341,
+            "name": "Leeds United",
+            "shortName": "Leeds",
+            "tla": "LEE",
+            "crest": "https://crests.football-data.org/341.png"
+          },
+          "playedGames": 46,
+          "form": null,
+          "won": 28,
+          "draw": 6,
+          "lost": 12,
+          "points": 90,
+          "goalsFor": 82,
+          "goalsAgainst": 58,
+          "goalDifference": 24
+        },
+        {
+          "position": 3,
+          "team": {
+            "id": 340,
+            "name": "Southampton FC",
+            "shortName": "Southampton",
+            "tla": "SOU",
+            "crest": "https://crests.football-data.org/340.png"
+          },
+          "playedGames": 46,
+          "form": null,
+          "won": 26,
+          "draw": 12,
+          "lost": 8,
+          "points": 90,
+          "goalsFor": 85,
+          "goalsAgainst": 63,
+          "goalDifference": 22
+        },
+        {
+          "position": 4,
+          "team": {
+            "id": 345,
+            "name": "Norwich City",
+            "shortName": "Norwich",
+            "tla": "NOR",
+            "crest": "https://crests.football-data.org/345.png"
+          },
+          "playedGames": 46,
+          "form": null,
+          "won": 25,
+          "draw": 10,
+          "lost": 11,
+          "points": 85,
+          "goalsFor": 78,
+          "goalsAgainst": 52,
+          "goalDifference": 26
+        }
+      ]
+    }
+  ]
+}
