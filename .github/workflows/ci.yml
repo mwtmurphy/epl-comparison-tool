@@ -46,6 +46,7 @@ jobs:
 
       - name: Streamlit health check
         run: |
-          poetry run streamlit run app.py --headless &
+          poetry run streamlit run app.py --server.headless true --server.port 8501 &
+          STREAMLIT_PID=$!
           sleep 15
-          kill $!
+          kill $STREAMLIT_PID
