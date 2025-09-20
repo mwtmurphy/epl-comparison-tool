@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Streamlit app comparing EPL team performance between seasons"
 authors = ["User"]
 readme = "README.md"
-packages = [{include = "src"}]
+package-mode = false
 
 [tool.poetry.dependencies]
 python = "^3.11"
