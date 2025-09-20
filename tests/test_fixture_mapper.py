@@ -247,7 +247,7 @@ class TestFixtureMapper:
         assert result.iloc[0]["current_home_team"] == "Arsenal"
         assert result.iloc[0]["current_away_team"] == "Chelsea"
         assert result.iloc[0]["comparison_fixture_id"] == 101
-        assert result.iloc[0]["mapping_found"] == True
+        assert result.iloc[0]["mapping_found"] == True  # noqa: E712
 
     @patch("fixture_mapper.get_fixtures")
     @patch("fixture_mapper.get_championship_standings")
