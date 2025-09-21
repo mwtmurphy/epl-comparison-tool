@@ -26,10 +26,41 @@ class FixtureMapper:
 
         Returns:
             DataFrame with mapped fixtures containing both seasons' data
+
+        Raises:
+            ValueError: If required data is missing or invalid for either season
         """
-        # Get fixtures for both seasons
-        current_fixtures = get_fixtures(current_season, self.api_key)
-        comparison_fixtures = get_fixtures(comparison_season, self.api_key)
+        # Get fixtures for both seasons with enhanced error handling
+        try:
+            current_fixtures = get_fixtures(current_season, self.api_key)
+        except (FileNotFoundError, ValueError) as e:
+            raise ValueError(
+                f"CRITICAL: Cannot load current season data for {current_season}/{current_season+1}.\n"
+                f"Error: {str(e)}\n"
+                f"Fixture mapping requires complete data for both seasons."
+            ) from e
+
+        try:
+            comparison_fixtures = get_fixtures(comparison_season, self.api_key)
+        except (FileNotFoundError, ValueError) as e:
+            raise ValueError(
+                f"CRITICAL: Cannot load comparison season data for {comparison_season}/{comparison_season+1}.\n"
+                f"Error: {str(e)}\n"
+                f"Fixture mapping requires complete data for both seasons."
+            ) from e
+
+        # Validate both datasets are usable
+        if current_fixtures.empty:
+            raise ValueError(
+                f"CRITICAL: Current season data is empty for {current_season}/{current_season+1}.\n"
+                f"Cannot perform fixture mapping without valid current season data."
+            )
+
+        if comparison_fixtures.empty:
+            raise ValueError(
+                f"CRITICAL: Comparison season data is empty for {comparison_season}/{comparison_season+1}.\n"
+                f"Cannot perform fixture mapping without valid comparison season data."
+            )
 
         # Create team mappings for promoted/relegated teams
         team_mapping = self._create_team_mapping(current_season, comparison_season)
@@ -132,11 +163,45 @@ class FixtureMapper:
         relegated_teams = comparison_teams - current_teams
 
         print(
-            f"Promoted teams in {current_season}/{current_season+1}: {promoted_teams}"
+            f"Promoted teams in {current_season-1}/{current_season}: {promoted_teams}"
         )
         print(
-            f"Relegated teams from {comparison_season}/{comparison_season+1}: {relegated_teams}"
+            f"Relegated teams from {comparison_season-1}/{comparison_season}: {relegated_teams}"
         )
+
+        # Validate expected team changes
+        expected_changes = 3  # Normal EPL promotion/relegation
+
+        if len(promoted_teams) != len(relegated_teams):
+            print(
+                f"⚠️  Warning: Unbalanced team changes - {len(promoted_teams)} promoted, {len(relegated_teams)} relegated"
+            )
+
+        if len(promoted_teams) == 0 and len(relegated_teams) == 0:
+            print(
+                "ℹ️  No team changes detected between seasons - this may indicate data issues"
+            )
+            return {}
+
+        if len(promoted_teams) != expected_changes:
+            if len(promoted_teams) == 0:
+                print(
+                    "❌ Critical: No promoted teams found - this suggests identical team rosters"
+                )
+            else:
+                print(
+                    f"⚠️  Warning: Expected {expected_changes} promoted teams, found {len(promoted_teams)}"
+                )
+
+        if len(relegated_teams) != expected_changes:
+            if len(relegated_teams) == 0:
+                print(
+                    "❌ Critical: No relegated teams found - this suggests identical team rosters"
+                )
+            else:
+                print(
+                    f"⚠️  Warning: Expected {expected_changes} relegated teams, found {len(relegated_teams)}"
+                )
 
         # If no team changes, return empty mapping
         if not promoted_teams and not relegated_teams:

@@ -46,17 +46,68 @@ class FootballDataAPI:
 
         Raises:
             FileNotFoundError: If cached data file doesn't exist
+            ValueError: If data file is empty or corrupt
         """
         cache_file = self.data_dir / f"fixtures_{season}.csv"
 
-        # Only use cached data in offline mode
-        if cache_file.exists():
-            print(f"Loading cached fixtures for {season}/{season+1} season")
-            return pd.read_csv(cache_file)
-        else:
+        # Check if file exists
+        if not cache_file.exists():
             raise FileNotFoundError(
-                f"No cached fixture data found for {season}/{season+1} season. "
-                f"Expected file: {cache_file}"
+                f"CRITICAL: Missing fixture data file for {season}/{season+1} season.\n"
+                f"Expected file: {cache_file}\n"
+                f"The application cannot function without this required data file.\n"
+                f"Please ensure the data file exists and contains valid EPL fixture data."
+            )
+
+        # Load and validate data
+        try:
+            print(f"Loading cached fixtures for {season}/{season+1} season")
+            df = pd.read_csv(cache_file)
+
+            # Validate data is not empty
+            if df.empty:
+                raise ValueError(
+                    f"CRITICAL: Empty fixture data file for {season}/{season+1} season.\n"
+                    f"File: {cache_file}\n"
+                    f"The data file exists but contains no fixture records.\n"
+                    f"A complete EPL season should have 380 fixtures."
+                )
+
+            # Validate minimum expected columns
+            required_columns = ["id", "home_team", "away_team", "season"]
+            missing_columns = [col for col in required_columns if col not in df.columns]
+            if missing_columns:
+                raise ValueError(
+                    f"CRITICAL: Invalid fixture data structure for {season}/{season+1} season.\n"
+                    f"File: {cache_file}\n"
+                    f"Missing required columns: {missing_columns}\n"
+                    f"Please ensure the data file has the correct format."
+                )
+
+            # Validate record count (warn if suspiciously low)
+            if len(df) < 100:
+                raise ValueError(
+                    f"CRITICAL: Insufficient fixture data for {season}/{season+1} season.\n"
+                    f"File: {cache_file}\n"
+                    f"Found only {len(df)} fixtures. A complete EPL season should have 380 fixtures.\n"
+                    f"Please ensure the data file contains complete season data."
+                )
+
+            return df
+
+        except pd.errors.EmptyDataError:
+            raise ValueError(
+                f"CRITICAL: Corrupted fixture data file for {season}/{season+1} season.\n"
+                f"File: {cache_file}\n"
+                f"The file appears to be empty or corrupted.\n"
+                f"Please replace with a valid CSV file containing EPL fixture data."
+            )
+        except pd.errors.ParserError as e:
+            raise ValueError(
+                f"CRITICAL: Invalid CSV format for {season}/{season+1} season.\n"
+                f"File: {cache_file}\n"
+                f"Parser error: {str(e)}\n"
+                f"Please ensure the file is a valid CSV with proper formatting."
             )
 
     def get_results(self, season: int) -> pd.DataFrame:
@@ -219,7 +270,7 @@ def get_data_status() -> dict:
         Dictionary with data status information
     """
     # Check for key seasons
-    key_seasons = [2024, 2025]
+    key_seasons = [2025, 2026]
     validation = validate_data_files(key_seasons)
 
     status = {
