@@ -2,12 +2,9 @@
 Data fetcher for Football-Data.org API to get EPL fixtures and results.
 """
 
-import os
 import pandas as pd
-import requests
 from pathlib import Path
-from typing import Optional
-import time
+from typing import Optional, List
 
 
 class FootballDataAPI:
@@ -17,31 +14,21 @@ class FootballDataAPI:
     EPL_COMPETITION_ID = "PL"
 
     def __init__(self, api_key: Optional[str] = None):
-        """Initialize with API key from environment or parameter."""
-        self.api_key = api_key or os.getenv("FOOTBALL_DATA_API_KEY")
-        self.session = requests.Session()
-        if self.api_key:
-            self.session.headers.update({"X-Auth-Token": self.api_key})
+        """Initialize in offline mode - API key ignored."""
+        # Force offline mode - no API calls allowed
+        self.api_key = None
+        self.session = None
+        self.offline_mode = True
 
         # Ensure data directory exists
         self.data_dir = Path("data")
         self.data_dir.mkdir(exist_ok=True)
 
     def _make_request(self, endpoint: str) -> dict:
-        """Make API request with error handling and rate limiting."""
-        url = f"{self.BASE_URL}{endpoint}"
-
-        try:
-            response = self.session.get(url)
-            response.raise_for_status()
-
-            # Basic rate limiting - free tier allows 10 requests per minute
-            time.sleep(6)
-
-            return response.json()
-        except requests.exceptions.RequestException as e:
-            print(f"API request failed: {e}")
-            raise
+        """Disabled - API requests not allowed in offline mode."""
+        raise RuntimeError(
+            "API requests disabled - operating in offline mode with cached data only"
+        )
 
     def _get_season_string(self, season: int) -> str:
         """Convert season year to Football-Data.org format (e.g., 2025 -> '2025')."""
@@ -49,64 +36,28 @@ class FootballDataAPI:
 
     def get_fixtures(self, season: int) -> pd.DataFrame:
         """
-        Get EPL fixtures for a specific season.
+        Get EPL fixtures for a specific season from cached data only.
 
         Args:
             season: The season year (e.g., 2025 for 2025/26 season)
 
         Returns:
             DataFrame with fixture data
+
+        Raises:
+            FileNotFoundError: If cached data file doesn't exist
         """
         cache_file = self.data_dir / f"fixtures_{season}.csv"
 
-        # Return cached data if available
+        # Only use cached data in offline mode
         if cache_file.exists():
             print(f"Loading cached fixtures for {season}/{season+1} season")
             return pd.read_csv(cache_file)
-
-        print(f"Fetching fixtures for {season}/{season+1} season from API")
-
-        endpoint = f"/competitions/{self.EPL_COMPETITION_ID}/matches"
-
-        # For free tier, we can't use query parameters
-        # We'll get all matches and filter if needed
-        data = self._make_request(endpoint)
-
-        fixtures = []
-        for match in data.get("matches", []):
-            fixture = {
-                "id": match["id"],
-                "matchday": match.get("matchday"),
-                "utcDate": match["utcDate"],
-                "status": match["status"],
-                "home_team": match["homeTeam"]["name"],
-                "away_team": match["awayTeam"]["name"],
-                "home_team_id": match["homeTeam"]["id"],
-                "away_team_id": match["awayTeam"]["id"],
-                "season": season,
-            }
-
-            # Add score information if available
-            score = match.get("score", {})
-            if score and score.get("fullTime"):
-                fixture.update(
-                    {
-                        "home_score": score["fullTime"].get("home"),
-                        "away_score": score["fullTime"].get("away"),
-                    }
-                )
-            else:
-                fixture.update({"home_score": None, "away_score": None})
-
-            fixtures.append(fixture)
-
-        df = pd.DataFrame(fixtures)
-
-        # Cache the data
-        df.to_csv(cache_file, index=False)
-        print(f"Cached {len(df)} fixtures to {cache_file}")
-
-        return df
+        else:
+            raise FileNotFoundError(
+                f"No cached fixture data found for {season}/{season+1} season. "
+                f"Expected file: {cache_file}"
+            )
 
     def get_results(self, season: int) -> pd.DataFrame:
         """
@@ -161,7 +112,7 @@ class FootballDataAPI:
 
     def get_championship_standings(self, season: int) -> pd.DataFrame:
         """
-        Get Championship final standings for promoted team mapping.
+        Get Championship final standings for promoted team mapping from cached data only.
 
         Args:
             season: The season year
@@ -174,38 +125,9 @@ class FootballDataAPI:
         if cache_file.exists():
             print(f"Loading cached Championship standings for {season}/{season+1}")
             return pd.read_csv(cache_file)
-
-        print(f"Fetching Championship standings for {season}/{season+1} from API")
-
-        # Championship competition ID
-        endpoint = "/competitions/ELC/standings"
-
-        try:
-            data = self._make_request(endpoint)
-            standings = []
-
-            for table in data.get("standings", []):
-                if table["type"] == "TOTAL":
-                    for entry in table["table"]:
-                        standing = {
-                            "position": entry["position"],
-                            "team_name": entry["team"]["name"],
-                            "team_id": entry["team"]["id"],
-                            "points": entry["points"],
-                            "goal_difference": entry["goalDifference"],
-                            "season": season,
-                        }
-                        standings.append(standing)
-
-            df = pd.DataFrame(standings)
-            df.to_csv(cache_file, index=False)
-            print(f"Cached Championship standings to {cache_file}")
-
-            return df
-
-        except Exception as e:
-            print(f"Could not fetch Championship data: {e}")
-            # Return empty DataFrame with expected structure
+        else:
+            print(f"No cached Championship data found for {season}/{season+1}")
+            # Return empty DataFrame with expected structure for graceful handling
             return pd.DataFrame(
                 columns=[
                     "position",
@@ -220,20 +142,92 @@ class FootballDataAPI:
 
 # Convenience functions for easy access
 def get_fixtures(season: int, api_key: Optional[str] = None) -> pd.DataFrame:
-    """Get EPL fixtures for a season."""
-    api = FootballDataAPI(api_key)
+    """Get EPL fixtures for a season. API key parameter ignored in offline mode."""
+    api = FootballDataAPI(None)  # Always pass None for offline mode
     return api.get_fixtures(season)
 
 
 def get_results(season: int, api_key: Optional[str] = None) -> pd.DataFrame:
-    """Get EPL results for a season."""
-    api = FootballDataAPI(api_key)
+    """Get EPL results for a season. API key parameter ignored in offline mode."""
+    api = FootballDataAPI(None)  # Always pass None for offline mode
     return api.get_results(season)
 
 
 def get_championship_standings(
     season: int, api_key: Optional[str] = None
 ) -> pd.DataFrame:
-    """Get Championship final standings for a season."""
-    api = FootballDataAPI(api_key)
+    """Get Championship final standings for a season. API key parameter ignored in offline mode."""
+    api = FootballDataAPI(None)  # Always pass None for offline mode
     return api.get_championship_standings(season)
+
+
+def validate_data_files(seasons: List[int]) -> dict:
+    """
+    Validate that required CSV files exist for the given seasons.
+
+    Args:
+        seasons: List of season years to validate
+
+    Returns:
+        Dictionary with validation results
+    """
+    data_dir = Path("data")
+    validation_results = {
+        "all_files_present": True,
+        "missing_files": [],
+        "available_files": [],
+        "validation_details": {},
+    }
+
+    for season in seasons:
+        season_validation = {
+            "fixtures_file": False,
+            "fixtures_path": None,
+            "has_data": False,
+            "record_count": 0,
+        }
+
+        fixtures_file = data_dir / f"fixtures_{season}.csv"
+        season_validation["fixtures_path"] = str(fixtures_file)
+
+        if fixtures_file.exists():
+            season_validation["fixtures_file"] = True
+            validation_results["available_files"].append(str(fixtures_file))
+
+            # Check if file has data
+            try:
+                df = pd.read_csv(fixtures_file)
+                season_validation["has_data"] = not df.empty
+                season_validation["record_count"] = len(df)
+            except Exception as e:
+                season_validation["error"] = str(e)
+
+        else:
+            validation_results["all_files_present"] = False
+            validation_results["missing_files"].append(str(fixtures_file))
+
+        validation_results["validation_details"][f"season_{season}"] = season_validation
+
+    return validation_results
+
+
+def get_data_status() -> dict:
+    """
+    Get current data status for the app.
+
+    Returns:
+        Dictionary with data status information
+    """
+    # Check for key seasons
+    key_seasons = [2024, 2025]
+    validation = validate_data_files(key_seasons)
+
+    status = {
+        "offline_mode": True,
+        "api_disabled": True,
+        "data_validation": validation,
+        "recommended_seasons": key_seasons,
+        "status": "ready" if validation["all_files_present"] else "incomplete",
+    }
+
+    return status

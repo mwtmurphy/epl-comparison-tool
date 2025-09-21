@@ -11,8 +11,8 @@ class TeamPerformanceComparison:
     """Compares team performance between different EPL seasons."""
 
     def __init__(self, api_key: Optional[str] = None):
-        """Initialize with optional API key."""
-        self.api_key = api_key
+        """Initialize in offline mode. API key parameter ignored."""
+        self.api_key = None  # Force offline mode
 
     def compare_seasons(
         self, current_season: int, comparison_season: int
@@ -367,12 +367,12 @@ def compare_team_performance(
     Args:
         current_season: Current season year (e.g., 2025)
         comparison_season: Comparison season year (e.g., 2024)
-        api_key: Optional Football-Data.org API key
+        api_key: Optional API key (ignored in offline mode)
 
     Returns:
         DataFrame with team comparison data
     """
-    comparator = TeamPerformanceComparison(api_key)
+    comparator = TeamPerformanceComparison(None)  # Force offline mode
     return comparator.compare_seasons(current_season, comparison_season)
 
 
@@ -389,10 +389,10 @@ def get_team_performance_summary(
         team_name: Name of the team
         current_season: Current season year
         comparison_season: Comparison season year
-        api_key: Optional API key
+        api_key: Optional API key (ignored in offline mode)
 
     Returns:
         Dictionary with team performance summary
     """
-    comparator = TeamPerformanceComparison(api_key)
+    comparator = TeamPerformanceComparison(None)  # Force offline mode
     return comparator.get_team_comparison(team_name, current_season, comparison_season)

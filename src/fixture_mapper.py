@@ -12,8 +12,8 @@ class FixtureMapper:
     """Maps fixtures between different EPL seasons, handling team changes."""
 
     def __init__(self, api_key: Optional[str] = None):
-        """Initialize with optional API key."""
-        self.api_key = api_key
+        """Initialize in offline mode. API key parameter ignored."""
+        self.api_key = None  # Force offline mode
         self._team_mappings = {}
 
     def map_fixtures(self, current_season: int, comparison_season: int) -> pd.DataFrame:
@@ -292,12 +292,12 @@ def map_fixtures_between_seasons(
     Args:
         current_season: Current season year (e.g., 2025)
         comparison_season: Comparison season year (e.g., 2024)
-        api_key: Optional Football-Data.org API key
+        api_key: Optional API key (ignored in offline mode)
 
     Returns:
         DataFrame with mapped fixtures
     """
-    mapper = FixtureMapper(api_key)
+    mapper = FixtureMapper(None)  # Force offline mode
     return mapper.map_fixtures(current_season, comparison_season)
 
 
@@ -310,10 +310,10 @@ def get_team_mappings(
     Args:
         current_season: Current season year
         comparison_season: Comparison season year
-        api_key: Optional API key
+        api_key: Optional API key (ignored in offline mode)
 
     Returns:
         Dictionary with mapping summary
     """
-    mapper = FixtureMapper(api_key)
+    mapper = FixtureMapper(None)  # Force offline mode
     return mapper.get_team_mapping_summary(current_season, comparison_season)
