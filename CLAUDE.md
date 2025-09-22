@@ -26,6 +26,15 @@
 - Write unit tests with `pytest`
 - Use mock data in `/tests/data`
 - Aim for coverage on critical functions
+- **CRITICAL**: All tests must pass before committing
+- Run full test suite locally: `poetry run pytest`
+- Tests automatically run in CI pipeline
+
+### Pre-commit Requirements
+1. **Lint Check**: `poetry run ruff check . && poetry run black --check .`
+2. **Test Suite**: `poetry run pytest` (all 48 tests must pass)
+3. **No API Dependencies**: All code operates in offline mode only
+4. **Test Data**: Mock data must have 100+ records to pass validation
 
 ## Documentation
 - Update README with new features

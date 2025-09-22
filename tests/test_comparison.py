@@ -25,9 +25,9 @@ class TestTeamPerformanceComparison:
         self.comparator = TeamPerformanceComparison(api_key="test_key")
 
     def test_init_with_api_key(self):
-        """Test initialization with API key."""
+        """Test initialization with API key (always None in offline mode)."""
         comparator = TeamPerformanceComparison(api_key="test_key")
-        assert comparator.api_key == "test_key"
+        assert comparator.api_key is None  # Always None in offline mode
 
     def test_init_without_api_key(self):
         """Test initialization without API key."""
@@ -422,7 +422,9 @@ class TestConvenienceFunctions:
 
         compare_team_performance(2025, 2024, "test_key")
 
-        mock_comparator_class.assert_called_once_with("test_key")
+        mock_comparator_class.assert_called_once_with(
+            None
+        )  # Always None in offline mode
         mock_comparator.compare_seasons.assert_called_once_with(2025, 2024)
 
     @patch("comparison.TeamPerformanceComparison")
@@ -434,7 +436,9 @@ class TestConvenienceFunctions:
 
         get_team_performance_summary("Arsenal", 2025, 2024, "test_key")
 
-        mock_comparator_class.assert_called_once_with("test_key")
+        mock_comparator_class.assert_called_once_with(
+            None
+        )  # Always None in offline mode
         mock_comparator.get_team_comparison.assert_called_once_with(
             "Arsenal", 2025, 2024
         )
