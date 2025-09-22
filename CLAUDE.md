@@ -15,12 +15,16 @@
 - **Format**: `poetry run black .`
 - **Test**: `poetry run pytest`
 - **Run App**: `poetry run streamlit run app.py`
+- **Check CI Locally**: `./scripts/check-ci.sh` (runs all CI checks locally)
+- **Pre-commit**: `poetry run pre-commit run --all-files`
 
 ## Git Workflow
 - Use feature branches: `feature/<name>`
+- **Pre-commit hooks installed** - automatically run formatting and linting before commits
 - PRs require:
   - ✅ CI checks (lint, tests, health check)
   - At least one reviewer approval
+- **Before Pushing**: Run `./scripts/check-ci.sh` to catch issues locally
 
 ## Testing
 - Write unit tests with `pytest`

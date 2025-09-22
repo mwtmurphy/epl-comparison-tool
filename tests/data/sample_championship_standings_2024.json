@@ -1,101 +1,101 @@
 {
-  "filters": {},
   "competition": {
+    "code": "ELC",
+    "emblem": "https://crests.football-data.org/ELC.png",
     "id": "ELC",
     "name": "Championship",
-    "code": "ELC",
-    "type": "LEAGUE",
-    "emblem": "https://crests.football-data.org/ELC.png"
+    "type": "LEAGUE"
   },
+  "filters": {},
   "season": {
-    "id": 2,
-    "startDate": "2024-08-10",
+    "currentMatchday": 46,
     "endDate": "2025-05-04",
-    "currentMatchday": 46
+    "id": 2,
+    "startDate": "2024-08-10"
   },
   "standings": [
     {
-      "stage": "REGULAR_SEASON",
-      "type": "TOTAL",
       "group": null,
+      "stage": "REGULAR_SEASON",
       "table": [
         {
+          "draw": 4,
+          "form": null,
+          "goalDifference": 48,
+          "goalsAgainst": 41,
+          "goalsFor": 89,
+          "lost": 11,
+          "playedGames": 46,
+          "points": 97,
           "position": 1,
           "team": {
+            "crest": "https://crests.football-data.org/338.png",
             "id": 338,
             "name": "Leicester City",
             "shortName": "Leicester",
-            "tla": "LEI",
-            "crest": "https://crests.football-data.org/338.png"
+            "tla": "LEI"
           },
-          "playedGames": 46,
-          "form": null,
-          "won": 31,
-          "draw": 4,
-          "lost": 11,
-          "points": 97,
-          "goalsFor": 89,
-          "goalsAgainst": 41,
-          "goalDifference": 48
+          "won": 31
         },
         {
+          "draw": 6,
+          "form": null,
+          "goalDifference": 24,
+          "goalsAgainst": 58,
+          "goalsFor": 82,
+          "lost": 12,
+          "playedGames": 46,
+          "points": 90,
           "position": 2,
           "team": {
+            "crest": "https://crests.football-data.org/341.png",
             "id": 341,
             "name": "Leeds United",
             "shortName": "Leeds",
-            "tla": "LEE",
-            "crest": "https://crests.football-data.org/341.png"
+            "tla": "LEE"
           },
-          "playedGames": 46,
-          "form": null,
-          "won": 28,
-          "draw": 6,
-          "lost": 12,
-          "points": 90,
-          "goalsFor": 82,
-          "goalsAgainst": 58,
-          "goalDifference": 24
+          "won": 28
         },
         {
+          "draw": 12,
+          "form": null,
+          "goalDifference": 22,
+          "goalsAgainst": 63,
+          "goalsFor": 85,
+          "lost": 8,
+          "playedGames": 46,
+          "points": 90,
           "position": 3,
           "team": {
+            "crest": "https://crests.football-data.org/340.png",
             "id": 340,
             "name": "Southampton FC",
             "shortName": "Southampton",
-            "tla": "SOU",
-            "crest": "https://crests.football-data.org/340.png"
+            "tla": "SOU"
           },
-          "playedGames": 46,
-          "form": null,
-          "won": 26,
-          "draw": 12,
-          "lost": 8,
-          "points": 90,
-          "goalsFor": 85,
-          "goalsAgainst": 63,
-          "goalDifference": 22
+          "won": 26
         },
         {
+          "draw": 10,
+          "form": null,
+          "goalDifference": 26,
+          "goalsAgainst": 52,
+          "goalsFor": 78,
+          "lost": 11,
+          "playedGames": 46,
+          "points": 85,
           "position": 4,
           "team": {
+            "crest": "https://crests.football-data.org/345.png",
             "id": 345,
             "name": "Norwich City",
             "shortName": "Norwich",
-            "tla": "NOR",
-            "crest": "https://crests.football-data.org/345.png"
+            "tla": "NOR"
           },
-          "playedGames": 46,
-          "form": null,
-          "won": 25,
-          "draw": 10,
-          "lost": 11,
-          "points": 85,
-          "goalsFor": 78,
-          "goalsAgainst": 52,
-          "goalDifference": 26
+          "won": 25
         }
-      ]
+      ],
+      "type": "TOTAL"
     }
   ]
 }
