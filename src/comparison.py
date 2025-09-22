@@ -290,9 +290,9 @@ class TeamPerformanceComparison:
         # Filter to only include teams that played in the current season
         # (teams with games played > 0)
         current_games_played = (
-            merged[f"wins_{current_season}"] +
-            merged[f"draws_{current_season}"] +
-            merged[f"losses_{current_season}"]
+            merged[f"wins_{current_season}"]
+            + merged[f"draws_{current_season}"]
+            + merged[f"losses_{current_season}"]
         )
         merged = merged[current_games_played > 0].copy()
 
@@ -311,17 +311,31 @@ class TeamPerformanceComparison:
         display_df["Draw"] = merged[f"draws_{current_season}"].astype(int)
         display_df["Lost"] = merged[f"losses_{current_season}"].astype(int)
         display_df["Goals for"] = merged[f"goals_for_{current_season}"].astype(int)
-        display_df["Goals against"] = merged[f"goals_against_{current_season}"].astype(int)
-        display_df["Goal difference"] = merged[f"goal_difference_{current_season}"].astype(int)
+        display_df["Goals against"] = merged[f"goals_against_{current_season}"].astype(
+            int
+        )
+        display_df["Goal difference"] = merged[
+            f"goal_difference_{current_season}"
+        ].astype(int)
         display_df["Points"] = merged[f"points_{current_season}"].astype(int)
         display_df["Previous won"] = merged[f"wins_{comparison_season}"].astype(int)
         display_df["Previous draw"] = merged[f"draws_{comparison_season}"].astype(int)
         display_df["Previous lost"] = merged[f"losses_{comparison_season}"].astype(int)
-        display_df["Previous goals for"] = merged[f"goals_for_{comparison_season}"].astype(int)
-        display_df["Previous goals against"] = merged[f"goals_against_{comparison_season}"].astype(int)
-        display_df["Previous goal difference"] = merged[f"goal_difference_{comparison_season}"].astype(int)
-        display_df["Previous points"] = merged[f"points_{comparison_season}"].astype(int)
-        display_df["Current vs previous points difference"] = merged["points_difference"].astype(int)
+        display_df["Previous goals for"] = merged[
+            f"goals_for_{comparison_season}"
+        ].astype(int)
+        display_df["Previous goals against"] = merged[
+            f"goals_against_{comparison_season}"
+        ].astype(int)
+        display_df["Previous goal difference"] = merged[
+            f"goal_difference_{comparison_season}"
+        ].astype(int)
+        display_df["Previous points"] = merged[f"points_{comparison_season}"].astype(
+            int
+        )
+        display_df["Current vs previous points difference"] = merged[
+            "points_difference"
+        ].astype(int)
 
         # Keep internal columns for charts and other functionality (prefixed with _)
         display_df["_points_improved"] = merged["points_improved"]
@@ -363,7 +377,9 @@ class TeamPerformanceComparison:
                 "comparison": f"{comparison_season}/{comparison_season+1}",
             },
             "current_season": {
-                "games_played": int(team_row["Won"] + team_row["Draw"] + team_row["Lost"]),
+                "games_played": int(
+                    team_row["Won"] + team_row["Draw"] + team_row["Lost"]
+                ),
                 "points": int(team_row["Points"]),
                 "wins": int(team_row["Won"]),
                 "draws": int(team_row["Draw"]),
@@ -373,7 +389,11 @@ class TeamPerformanceComparison:
                 "goal_difference": int(team_row["Goal difference"]),
             },
             "comparison_season": {
-                "games_played": int(team_row["Previous won"] + team_row["Previous draw"] + team_row["Previous lost"]),
+                "games_played": int(
+                    team_row["Previous won"]
+                    + team_row["Previous draw"]
+                    + team_row["Previous lost"]
+                ),
                 "points": int(team_row["Previous points"]),
                 "wins": int(team_row["Previous won"]),
                 "draws": int(team_row["Previous draw"]),

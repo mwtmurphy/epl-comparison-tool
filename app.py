@@ -146,8 +146,7 @@ def apply_conditional_formatting(df: pd.DataFrame) -> pd.DataFrame:
     # Only format the "Current vs previous points difference" column
     if "Current vs previous points difference" in df.columns:
         styled_df = styled_df.map(
-            format_points_difference,
-            subset=["Current vs previous points difference"]
+            format_points_difference, subset=["Current vs previous points difference"]
         )
 
     return styled_df
@@ -186,7 +185,10 @@ def create_performance_charts(df: pd.DataFrame, metric: str = "points") -> dict:
             title=f"Top 10 {metric.replace('_', ' ').title()} Improvers",
             color=diff_col,
             color_continuous_scale="RdYlGn",
-            labels={diff_col: f"{metric.replace('_', ' ').title()} Difference", team_col: "Team"},
+            labels={
+                diff_col: f"{metric.replace('_', ' ').title()} Difference",
+                team_col: "Team",
+            },
         )
         fig_improvers.update_layout(xaxis_tickangle=-45)
         charts["improvers"] = fig_improvers
@@ -197,7 +199,10 @@ def create_performance_charts(df: pd.DataFrame, metric: str = "points") -> dict:
         x=diff_col,
         nbins=20,
         title=f"{metric.replace('_', ' ').title()} Difference Distribution",
-        labels={diff_col: f"{metric.replace('_', ' ').title()} Difference", "count": "Number of Teams"},
+        labels={
+            diff_col: f"{metric.replace('_', ' ').title()} Difference",
+            "count": "Number of Teams",
+        },
     )
     charts["distribution"] = fig_dist
 
