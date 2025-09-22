@@ -11,8 +11,8 @@ class TeamPerformanceComparison:
     """Compares team performance between different EPL seasons."""
 
     def __init__(self, api_key: Optional[str] = None):
-        """Initialize with optional API key."""
-        self.api_key = api_key
+        """Initialize in offline mode. API key parameter ignored."""
+        self.api_key = None  # Force offline mode
 
     def compare_seasons(
         self, current_season: int, comparison_season: int
@@ -26,11 +26,54 @@ class TeamPerformanceComparison:
 
         Returns:
             DataFrame with team comparison data
+
+        Raises:
+            ValueError: If required data is missing or invalid
         """
-        # Get mapped fixtures between seasons
-        mapped_fixtures = map_fixtures_between_seasons(
-            current_season, comparison_season, self.api_key
-        )
+        try:
+            # Get mapped fixtures between seasons
+            mapped_fixtures = map_fixtures_between_seasons(
+                current_season, comparison_season, self.api_key
+            )
+        except (FileNotFoundError, ValueError) as e:
+            raise ValueError(
+                f"CRITICAL: Cannot perform season comparison for {current_season}/{current_season+1} vs {comparison_season}/{comparison_season+1}.\n"
+                f"Data error: {str(e)}\n"
+                f"The application requires complete fixture data for both seasons to function."
+            ) from e
+
+        if mapped_fixtures.empty:
+            raise ValueError(
+                f"CRITICAL: No mapped fixtures found for comparison between {current_season}/{current_season+1} and {comparison_season}/{comparison_season+1}.\n"
+                f"This could indicate missing or incompatible data files.\n"
+                f"Please ensure both seasons have complete fixture data."
+            )
+
+        # Validate mapped fixtures
+        if not mapped_fixtures.empty:
+            mapping_success_rate = (
+                mapped_fixtures["mapping_found"].mean() * 100
+                if "mapping_found" in mapped_fixtures.columns
+                else 0
+            )
+            total_fixtures = len(mapped_fixtures)
+            successful_mappings = (
+                mapped_fixtures["mapping_found"].sum()
+                if "mapping_found" in mapped_fixtures.columns
+                else 0
+            )
+
+            print(
+                f"Fixture mapping results: {successful_mappings}/{total_fixtures} fixtures mapped ({mapping_success_rate:.1f}%)"
+            )
+
+            if mapping_success_rate < 50:
+                print(
+                    f"⚠️  Warning: Low fixture mapping success rate ({mapping_success_rate:.1f}%)"
+                )
+                print(
+                    "This may indicate significant team roster differences or data issues"
+                )
 
         # Calculate team performance for each season
         current_performance = self._calculate_team_performance(
@@ -39,6 +82,12 @@ class TeamPerformanceComparison:
         comparison_performance = self._calculate_team_performance(
             mapped_fixtures, "comparison"
         )
+
+        # Validate performance calculations
+        if current_performance.empty:
+            print("⚠️  Warning: No current season performance data calculated")
+        if comparison_performance.empty:
+            print("⚠️  Warning: No comparison season performance data calculated")
 
         # Merge and calculate differences
         comparison_df = self._merge_and_calculate_differences(
@@ -367,12 +416,12 @@ def compare_team_performance(
     Args:
         current_season: Current season year (e.g., 2025)
         comparison_season: Comparison season year (e.g., 2024)
-        api_key: Optional Football-Data.org API key
+        api_key: Optional API key (ignored in offline mode)
 
     Returns:
         DataFrame with team comparison data
     """
-    comparator = TeamPerformanceComparison(api_key)
+    comparator = TeamPerformanceComparison(None)  # Force offline mode
     return comparator.compare_seasons(current_season, comparison_season)
 
 
@@ -389,10 +438,10 @@ def get_team_performance_summary(
         team_name: Name of the team
         current_season: Current season year
         comparison_season: Comparison season year
-        api_key: Optional API key
+        api_key: Optional API key (ignored in offline mode)
 
     Returns:
         Dictionary with team performance summary
     """
-    comparator = TeamPerformanceComparison(api_key)
+    comparator = TeamPerformanceComparison(None)  # Force offline mode
     return comparator.get_team_comparison(team_name, current_season, comparison_season)

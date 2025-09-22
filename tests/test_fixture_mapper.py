@@ -25,9 +25,9 @@ class TestFixtureMapper:
         self.mapper = FixtureMapper(api_key="test_key")
 
     def test_init_with_api_key(self):
-        """Test initialization with API key."""
+        """Test initialization with API key (always None in offline mode)."""
         mapper = FixtureMapper(api_key="test_key")
-        assert mapper.api_key == "test_key"
+        assert mapper.api_key is None  # Always None in offline mode
         assert mapper._team_mappings == {}
 
     def test_init_without_api_key(self):
@@ -336,7 +336,7 @@ class TestConvenienceFunctions:
 
         map_fixtures_between_seasons(2025, 2024, "test_key")
 
-        mock_mapper_class.assert_called_once_with("test_key")
+        mock_mapper_class.assert_called_once_with(None)  # Always None in offline mode
         mock_mapper.map_fixtures.assert_called_once_with(2025, 2024)
 
     @patch("fixture_mapper.FixtureMapper")
@@ -348,5 +348,5 @@ class TestConvenienceFunctions:
 
         get_team_mappings(2025, 2024, "test_key")
 
-        mock_mapper_class.assert_called_once_with("test_key")
+        mock_mapper_class.assert_called_once_with(None)  # Always None in offline mode
         mock_mapper.get_team_mapping_summary.assert_called_once_with(2025, 2024)

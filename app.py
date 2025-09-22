@@ -11,13 +11,13 @@ sys.path.insert(0, str(Path(__file__).parent / "src"))
 import streamlit as st  # noqa: E402
 import pandas as pd  # noqa: E402
 import plotly.express as px  # noqa: E402
-from typing import Optional  # noqa: E402
 
 from comparison import (  # noqa: E402
     compare_team_performance,
     get_team_performance_summary,
 )
 from fixture_mapper import get_team_mappings  # noqa: E402
+from data_fetcher import get_data_status  # noqa: E402
 
 
 def setup_page_config():
@@ -35,8 +35,9 @@ def display_header():
     st.title("⚽ Premier League Points Comparison")
     st.markdown(
         """
-        Compare EPL team performance between the **2025/26 season** and **2024/25 season** 
-        using intelligent fixture mapping that accounts for promoted and relegated teams.
+        Compare EPL team performance between seasons using intelligent fixture mapping
+        that accounts for promoted and relegated teams. Select a season to automatically
+        compare against the previous season using offline data.
         """
     )
 
@@ -46,20 +47,13 @@ def create_sidebar() -> tuple:
     st.sidebar.header("🔧 Analysis Settings")
 
     # Season selection
-    st.sidebar.subheader("Seasons")
-    current_season = st.sidebar.number_input(
-        "Current Season",
-        min_value=2020,
+    st.sidebar.subheader("Season")
+    selected_season = st.sidebar.number_input(
+        "Season",
+        min_value=2021,
         max_value=2030,
-        value=2025,
-        help="The current season year (e.g., 2025 for 2025/26)",
-    )
-    comparison_season = st.sidebar.number_input(
-        "Comparison Season",
-        min_value=2020,
-        max_value=2030,
-        value=2024,
-        help="The season to compare against (e.g., 2024 for 2024/25)",
+        value=2026,
+        help="Season to analyse (will compare to previous season automatically)",
     )
 
     # Team selection
@@ -70,26 +64,9 @@ def create_sidebar() -> tuple:
         help="Select a specific team or view all teams",
     )
 
-    # Display options
-    st.sidebar.subheader("Display Options")
-    show_charts = st.sidebar.checkbox("Show Charts", value=True)
-    show_improvements_only = st.sidebar.checkbox("Show Improvements Only", value=False)
-
-    # API Key input
-    st.sidebar.subheader("⚙️ Configuration")
-    api_key = st.sidebar.text_input(
-        "Football-Data.org API Key (Optional)",
-        type="password",
-        help="Enter your API key for live data. Leave empty to use cached data.",
-    )
-
     return (
-        current_season,
-        comparison_season,
+        selected_season,
         selected_team,
-        show_charts,
-        show_improvements_only,
-        api_key,
     )
 
 
@@ -123,31 +100,21 @@ def get_team_options() -> list:
 
 
 @st.cache_data(ttl=3600)  # Cache for 1 hour
-def load_comparison_data(
-    current_season: int, comparison_season: int, api_key: Optional[str]
-) -> pd.DataFrame:
+def load_comparison_data(current_season: int, comparison_season: int) -> pd.DataFrame:
     """Load and cache comparison data."""
-    return compare_team_performance(current_season, comparison_season, api_key)
+    return compare_team_performance(current_season, comparison_season, None)
 
 
 @st.cache_data(ttl=3600)  # Cache for 1 hour
-def load_team_mappings(
-    current_season: int, comparison_season: int, api_key: Optional[str]
-) -> dict:
+def load_team_mappings(current_season: int, comparison_season: int) -> dict:
     """Load and cache team mappings."""
-    return get_team_mappings(current_season, comparison_season, api_key)
+    return get_team_mappings(current_season, comparison_season, None)
 
 
-def format_comparison_table(
-    df: pd.DataFrame, show_improvements_only: bool
-) -> pd.DataFrame:
+def format_comparison_table(df: pd.DataFrame) -> pd.DataFrame:
     """Format the comparison table for display."""
     if df.empty:
         return df
-
-    # Filter for improvements only if requested
-    if show_improvements_only:
-        df = df[df["points_improved"] == True].copy()  # noqa: E712
 
     # Select and rename columns for display
     display_columns = {
@@ -234,7 +201,7 @@ def apply_conditional_formatting(df: pd.DataFrame) -> pd.DataFrame:
     """Apply conditional formatting to the dataframe."""
 
     def highlight_improvements(val):
-        """Color code improvements and declines."""
+        """Colour code improvements and declines."""
         if pd.isna(val):
             return ""
 
@@ -297,6 +264,47 @@ def create_performance_charts(df: pd.DataFrame, metric: str = "points") -> dict:
     return charts
 
 
+def display_data_status():
+    """Display current data status and validation information."""
+    try:
+        status = get_data_status()
+
+        # Show overall status
+        if status["status"] == "ready":
+            st.success("✅ All required data files are available")
+        else:
+            st.warning("⚠️ Some data files may be missing")
+
+        # Show data details in expander
+        with st.expander("📊 Data Status Details"):
+            col1, col2 = st.columns(2)
+
+            with col1:
+                st.write("**Configuration:**")
+                st.write(f"- Offline Mode: {status['offline_mode']}")
+                st.write(f"- API Disabled: {status['api_disabled']}")
+                st.write(f"- Status: {status['status'].title()}")
+
+            with col2:
+                st.write("**Available Seasons:**")
+                validation = status["data_validation"]
+                for season in status["recommended_seasons"]:
+                    season_key = f"season_{season}"
+                    if season_key in validation["validation_details"]:
+                        details = validation["validation_details"][season_key]
+                        if details["fixtures_file"] and details["has_data"]:
+                            st.write(
+                                f"✅ {season}/{season+1}: {details['record_count']} fixtures"
+                            )
+                        elif details["fixtures_file"]:
+                            st.write(f"⚠️ {season}/{season+1}: File exists but empty")
+                        else:
+                            st.write(f"❌ {season}/{season+1}: Missing data file")
+
+    except Exception as e:
+        st.error(f"Could not load data status: {str(e)}")
+
+
 def display_team_mappings(mappings: dict):
     """Display team mappings information."""
     if mappings.get("mapping_count", 0) > 0:
@@ -319,16 +327,14 @@ def display_team_mappings(mappings: dict):
         st.info("No team mappings found.")
 
 
-def display_team_detail(
-    team_name: str, current_season: int, comparison_season: int, api_key: Optional[str]
-):
+def display_team_detail(team_name: str, current_season: int, comparison_season: int):
     """Display detailed analysis for a specific team."""
     st.subheader(f"📊 {team_name} Detailed Analysis")
 
     try:
         with st.spinner(f"Loading {team_name} data..."):
             team_data = get_team_performance_summary(
-                team_name, current_season, comparison_season, api_key
+                team_name, current_season, comparison_season, None
             )
 
         if "error" in team_data:
@@ -386,70 +392,121 @@ def display_team_detail(
         st.error(f"Error loading team data: {str(e)}")
 
 
+def validate_required_data():
+    """Validate that all required data files exist before app starts."""
+    try:
+        status = get_data_status()
+
+        # Check if all required files are present
+        if not status["data_validation"]["all_files_present"]:
+            missing_files = status["data_validation"]["missing_files"]
+            st.error("❌ **Critical Error: Missing Required Data Files**")
+            st.markdown("The following required data files are missing:")
+            for file in missing_files:
+                st.markdown(f"- `{file}`")
+            st.markdown("**The application cannot function without these files.**")
+            st.stop()
+
+        # Check if files have actual data
+        validation_details = status["data_validation"]["validation_details"]
+        empty_files = []
+
+        for season_key, details in validation_details.items():
+            if details["fixtures_file"] and not details["has_data"]:
+                empty_files.append(details["fixtures_path"])
+
+        if empty_files:
+            st.error("❌ **Critical Error: Empty Data Files Detected**")
+            st.markdown("The following data files exist but contain no data:")
+            for file in empty_files:
+                st.markdown(f"- `{file}`")
+            st.markdown("**The application cannot function with empty data files.**")
+            st.stop()
+
+        # Additional validation: ensure minimum record count
+        insufficient_files = []
+        for season_key, details in validation_details.items():
+            if (
+                details["fixtures_file"]
+                and details["has_data"]
+                and details["record_count"] < 100
+            ):
+                insufficient_files.append(
+                    (details["fixtures_path"], details["record_count"])
+                )
+
+        if insufficient_files:
+            st.error("❌ **Critical Error: Insufficient Data**")
+            st.markdown("The following data files don't contain enough fixture data:")
+            for file, count in insufficient_files:
+                st.markdown(f"- `{file}`: {count} records (minimum 100 required)")
+            st.markdown("**A complete EPL season should have 380 fixtures.**")
+            st.stop()
+
+    except Exception as e:
+        st.error("❌ **Critical Error: Data Validation Failed**")
+        st.markdown(f"Could not validate required data files: {str(e)}")
+        st.markdown("**The application cannot start without proper data validation.**")
+        st.stop()
+
+
 def main():
     """Main Streamlit application."""
     setup_page_config()
+
+    # CRITICAL: Validate required data before proceeding
+    validate_required_data()
+
     display_header()
 
-    # Create sidebar and get user inputs
-    (
-        current_season,
-        comparison_season,
-        selected_team,
-        show_charts,
-        show_improvements_only,
-        api_key,
-    ) = create_sidebar()
+    # Display data status
+    display_data_status()
 
-    # Validate inputs
-    if current_season == comparison_season:
-        st.error("⚠️ Please select different seasons for comparison")
+    # Create sidebar and get user inputs
+    (selected_season, selected_team) = create_sidebar()
+
+    # Calculate comparison season automatically (previous season)
+    current_season = selected_season
+    comparison_season = selected_season - 1
+
+    # Validate season input
+    if current_season < 2020 or current_season > 2030:
+        st.error("⚠️ Please select a valid season year")
         return
 
     try:
         # Load data with progress indicator
         with st.spinner("Loading team performance data..."):
-            comparison_df = load_comparison_data(
-                current_season, comparison_season, api_key or None
-            )
+            comparison_df = load_comparison_data(current_season, comparison_season)
 
         if comparison_df.empty:
             st.warning("📭 No comparison data available for the selected seasons.")
             st.info("This could be due to:")
             st.write("- Seasons haven't started yet")
-            st.write("- No API key provided for live data")
-            st.write("- Network connectivity issues")
+            st.write("- Missing cached data files")
+            st.write("- Data processing issues")
             return
 
         # Display team mappings
         try:
-            mappings = load_team_mappings(
-                current_season, comparison_season, api_key or None
-            )
+            mappings = load_team_mappings(current_season, comparison_season)
             display_team_mappings(mappings)
         except Exception as e:
             st.warning(f"Could not load team mappings: {str(e)}")
 
         # Team-specific analysis
         if selected_team != "All Teams":
-            display_team_detail(
-                selected_team, current_season, comparison_season, api_key or None
-            )
+            display_team_detail(selected_team, current_season, comparison_season)
             st.divider()
 
         # Main comparison table
         st.subheader("📋 Team Performance Comparison")
 
-        # Filter data if specific team selected
+        # Always show all teams (no filtering)
         display_df = comparison_df.copy()
-        if selected_team != "All Teams":
-            display_df = display_df[display_df["team"] == selected_team]
-            if display_df.empty:
-                st.warning(f"No data found for {selected_team}")
-                return
 
         # Format and display table
-        formatted_df = format_comparison_table(display_df, show_improvements_only)
+        formatted_df = format_comparison_table(display_df)
         if not formatted_df.empty:
             styled_df = apply_conditional_formatting(formatted_df)
             st.dataframe(styled_df, use_container_width=True)
@@ -472,9 +529,9 @@ def main():
         else:
             st.info("No data to display with current filters.")
 
-        # Charts section
-        if show_charts and not display_df.empty:
-            st.subheader("📈 Performance Visualizations")
+        # Charts section (always shown)
+        if not display_df.empty:
+            st.subheader("📈 Performance Visualisations")
 
             chart_metric = st.selectbox(
                 "Select Metric for Charts",
@@ -499,7 +556,9 @@ def main():
 
     except Exception as e:
         st.error(f"❌ An error occurred: {str(e)}")
-        st.info("Please check your API key and try again, or use cached data.")
+        st.info(
+            "Please ensure all required data files are present in the data/ directory."
+        )
 
         # Show debug info in expander
         with st.expander("Debug Information"):

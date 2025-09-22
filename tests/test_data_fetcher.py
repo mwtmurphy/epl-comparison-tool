@@ -23,16 +23,16 @@ class TestFootballDataAPI:
         self.api = FootballDataAPI(api_key="test_key")
 
     def test_init_with_api_key(self):
-        """Test initialization with API key."""
+        """Test initialization with API key (always None in offline mode)."""
         api = FootballDataAPI(api_key="test_key")
-        assert api.api_key == "test_key"
-        assert "X-Auth-Token" in api.session.headers
+        assert api.api_key is None  # Always None in offline mode
+        assert api.session is None  # No session in offline mode
 
     def test_init_from_environment(self):
-        """Test initialization from environment variable."""
+        """Test initialization from environment variable (always None in offline mode)."""
         with patch.dict(os.environ, {"FOOTBALL_DATA_API_KEY": "env_key"}):
             api = FootballDataAPI()
-            assert api.api_key == "env_key"
+            assert api.api_key is None  # Always None in offline mode
 
     def test_get_season_string(self):
         """Test season string conversion."""
@@ -63,70 +63,38 @@ class TestFootballDataAPI:
         assert self.api._calculate_points(row, "home") == 0
         assert self.api._calculate_points(row, "away") == 0
 
-    @patch("data_fetcher.requests.Session.get")
-    def test_make_request_success(self, mock_get):
-        """Test successful API request."""
-        mock_response = Mock()
-        mock_response.json.return_value = {"test": "data"}
-        mock_response.raise_for_status.return_value = None
-        mock_get.return_value = mock_response
+    def test_make_request_offline_mode(self):
+        """Test that API requests are disabled in offline mode."""
+        with pytest.raises(RuntimeError, match="API requests disabled"):
+            self.api._make_request("/test")
 
-        with patch("time.sleep"):  # Skip sleep in tests
-            result = self.api._make_request("/test")
+    def test_make_request_failure_offline_mode(self):
+        """Test that API requests always fail in offline mode."""
+        with pytest.raises(RuntimeError, match="API requests disabled"):
+            self.api._make_request("/test")
 
-        assert result == {"test": "data"}
-        mock_get.assert_called_once()
-
-    @patch("data_fetcher.requests.Session.get")
-    def test_make_request_failure(self, mock_get):
-        """Test API request failure."""
-        mock_get.side_effect = Exception("API Error")
-
-        with pytest.raises(Exception):
-            with patch("time.sleep"):
-                self.api._make_request("/test")
-
-    @patch.object(FootballDataAPI, "_make_request")
-    def test_get_fixtures_from_api(self, mock_request):
-        """Test getting fixtures from API."""
-        # Mock API response
-        mock_response = {
-            "matches": [
-                {
-                    "id": 1,
-                    "matchday": 1,
-                    "utcDate": "2025-08-17T15:00:00Z",
-                    "status": "SCHEDULED",
-                    "homeTeam": {"name": "Arsenal", "id": 57},
-                    "awayTeam": {"name": "Chelsea", "id": 61},
-                    "score": {"fullTime": {"home": None, "away": None}},
-                }
-            ]
-        }
-        mock_request.return_value = mock_response
-
+    def test_get_fixtures_offline_mode_missing_file(self):
+        """Test getting fixtures in offline mode with missing file."""
         # Ensure no cache file exists
         cache_file = Path("data/fixtures_2025.csv")
         if cache_file.exists():
             cache_file.unlink()
 
-        result = self.api.get_fixtures(2025)
-
-        assert isinstance(result, pd.DataFrame)
-        assert len(result) == 1
-        assert result.iloc[0]["home_team"] == "Arsenal"
-        assert result.iloc[0]["away_team"] == "Chelsea"
-        assert result.iloc[0]["season"] == 2025
+        with pytest.raises(
+            FileNotFoundError, match="CRITICAL: Missing fixture data file"
+        ):
+            self.api.get_fixtures(2025)
 
     def test_get_fixtures_from_cache(self, tmp_path):
         """Test getting fixtures from cache."""
-        # Create a temporary cache file
+        # Create a temporary cache file with sufficient data (100+ rows)
+        teams = ["Arsenal", "Chelsea", "Liverpool", "Man City", "Man United"]
         cache_data = pd.DataFrame(
             {
-                "id": [1],
-                "home_team": ["Arsenal"],
-                "away_team": ["Chelsea"],
-                "season": [2025],
+                "id": list(range(1, 151)),  # 150 fixtures
+                "home_team": [teams[i % len(teams)] for i in range(150)],
+                "away_team": [teams[(i + 1) % len(teams)] for i in range(150)],
+                "season": [2025] * 150,
             }
         )
 
@@ -139,7 +107,7 @@ class TestFootballDataAPI:
         result = self.api.get_fixtures(2025)
 
         assert isinstance(result, pd.DataFrame)
-        assert len(result) == 1
+        assert len(result) == 150
         assert result.iloc[0]["home_team"] == "Arsenal"
 
         # Restore original data directory
@@ -181,7 +149,7 @@ class TestConvenienceFunctions:
 
         get_fixtures(2025, "test_key")
 
-        mock_api_class.assert_called_once_with("test_key")
+        mock_api_class.assert_called_once_with(None)  # Always None in offline mode
         mock_api.get_fixtures.assert_called_once_with(2025)
 
     @patch("data_fetcher.FootballDataAPI")
@@ -193,5 +161,5 @@ class TestConvenienceFunctions:
 
         get_results(2025, "test_key")
 
-        mock_api_class.assert_called_once_with("test_key")
+        mock_api_class.assert_called_once_with(None)  # Always None in offline mode
         mock_api.get_results.assert_called_once_with(2025)
