@@ -116,110 +116,39 @@ def format_comparison_table(df: pd.DataFrame) -> pd.DataFrame:
     if df.empty:
         return df
 
-    # Select and rename columns for display
-    display_columns = {
-        "team": "Team",
-        f"points_{df.columns[1].split('_')[1]}": "Current Points",
-        f"points_{df.columns[2].split('_')[1]}": "Previous Points",
-        "points_difference": "Points Δ",
-        "points_percentage_change": "Change %",
-        f"goal_difference_{df.columns[1].split('_')[1]}": "Current GD",
-        f"goal_difference_{df.columns[2].split('_')[1]}": "Previous GD",
-        "goal_difference_change": "GD Δ",
-        f"games_played_{df.columns[1].split('_')[1]}": "Games",
-    }
+    # The comparison engine now returns data in the correct format already
+    # Just exclude internal columns (those starting with _)
+    display_columns = [col for col in df.columns if not col.startswith("_")]
 
-    # Find the actual column names
-    available_cols = {}
-    for key, value in display_columns.items():
-        if key in df.columns:
-            available_cols[key] = value
-        elif (
-            key.startswith("points_")
-            and len(
-                [c for c in df.columns if c.startswith("points_") and c.endswith("_")]
-            )
-            >= 2
-        ):
-            # Find the actual points columns
-            points_cols = [
-                c
-                for c in df.columns
-                if c.startswith("points_")
-                and c != "points_difference"
-                and c != "points_percentage_change"
-                and c != "points_improved"
-            ]
-            if len(points_cols) >= 2:
-                if "current" in key.lower():
-                    available_cols[points_cols[0]] = value
-                elif "previous" in key.lower():
-                    available_cols[points_cols[1]] = value
-        elif (
-            key.startswith("goal_difference_")
-            and len(
-                [
-                    c
-                    for c in df.columns
-                    if c.startswith("goal_difference_") and c.endswith("_")
-                ]
-            )
-            >= 2
-        ):
-            # Find the actual goal difference columns
-            gd_cols = [
-                c
-                for c in df.columns
-                if c.startswith("goal_difference_")
-                and c != "goal_difference_change"
-                and c != "goal_difference_improved"
-            ]
-            if len(gd_cols) >= 2:
-                if "current" in key.lower():
-                    available_cols[gd_cols[0]] = value
-                elif "previous" in key.lower():
-                    available_cols[gd_cols[1]] = value
-        elif key.startswith("games_played_"):
-            games_cols = [c for c in df.columns if c.startswith("games_played_")]
-            if games_cols:
-                if "current" in key.lower() and len(games_cols) >= 1:
-                    available_cols[games_cols[0]] = value
-
-    # Use available columns
-    if available_cols:
-        df_display = df[list(available_cols.keys())].copy()
-        df_display = df_display.rename(columns=available_cols)
-    else:
-        # Fallback to essential columns
-        essential_cols = ["team", "points_difference", "goal_difference_change"]
-        df_display = df[[col for col in essential_cols if col in df.columns]].copy()
-
-    return df_display
+    return df[display_columns].copy()
 
 
 def apply_conditional_formatting(df: pd.DataFrame) -> pd.DataFrame:
     """Apply conditional formatting to the dataframe."""
 
-    def highlight_improvements(val):
-        """Colour code improvements and declines."""
+    def format_points_difference(val):
+        """Format points difference with bold colored text."""
         if pd.isna(val):
             return ""
 
         if isinstance(val, (int, float)):
             if val > 0:
-                return "background-color: #d4edda; color: #155724"  # Green
+                return "color: #155724; font-weight: bold"  # Green bold text
             elif val < 0:
-                return "background-color: #f8d7da; color: #721c24"  # Red
+                return "color: #721c24; font-weight: bold"  # Red bold text
             else:
-                return "background-color: #e2e3e5; color: #383d41"  # Gray
+                return "color: #6c757d; font-weight: bold"  # Gray bold text
         return ""
 
-    # Apply formatting to difference columns
+    # Apply formatting to the points difference column only
     styled_df = df.style
 
-    for col in df.columns:
-        if "Δ" in col or "Change" in col:
-            styled_df = styled_df.applymap(highlight_improvements, subset=[col])
+    # Only format the "Current vs previous points difference" column
+    if "Current vs previous points difference" in df.columns:
+        styled_df = styled_df.map(
+            format_points_difference,
+            subset=["Current vs previous points difference"]
+        )
 
     return styled_df
 
@@ -231,8 +160,19 @@ def create_performance_charts(df: pd.DataFrame, metric: str = "points") -> dict:
 
     charts = {}
 
-    # Get the actual column names
-    diff_col = f"{metric}_difference"
+    # Map metric to column names
+    if metric == "points":
+        diff_col = "Current vs previous points difference"
+        team_col = "Team name"
+    elif metric == "goal_difference":
+        diff_col = "_goal_difference_change"
+        team_col = "Team name"
+    elif metric == "goals_for":
+        diff_col = "_goals_for_difference"
+        team_col = "Team name"
+    else:
+        return charts
+
     if diff_col not in df.columns:
         return charts
 
@@ -241,12 +181,12 @@ def create_performance_charts(df: pd.DataFrame, metric: str = "points") -> dict:
     if not top_improvers.empty:
         fig_improvers = px.bar(
             top_improvers,
-            x="team",
+            x=team_col,
             y=diff_col,
-            title=f"Top 10 {metric.title()} Improvers",
+            title=f"Top 10 {metric.replace('_', ' ').title()} Improvers",
             color=diff_col,
             color_continuous_scale="RdYlGn",
-            labels={diff_col: f"{metric.title()} Difference", "team": "Team"},
+            labels={diff_col: f"{metric.replace('_', ' ').title()} Difference", team_col: "Team"},
         )
         fig_improvers.update_layout(xaxis_tickangle=-45)
         charts["improvers"] = fig_improvers
@@ -256,8 +196,8 @@ def create_performance_charts(df: pd.DataFrame, metric: str = "points") -> dict:
         df,
         x=diff_col,
         nbins=20,
-        title=f"{metric.title()} Difference Distribution",
-        labels={diff_col: f"{metric.title()} Difference", "count": "Number of Teams"},
+        title=f"{metric.replace('_', ' ').title()} Difference Distribution",
+        labels={diff_col: f"{metric.replace('_', ' ').title()} Difference", "count": "Number of Teams"},
     )
     charts["distribution"] = fig_dist
 
@@ -515,16 +455,16 @@ def main():
             col1, col2, col3 = st.columns(3)
             with col1:
                 improvers = len(
-                    display_df[display_df["points_improved"] == True]  # noqa: E712
+                    display_df[display_df["_points_improved"] == True]  # noqa: E712
                 )
                 st.metric("Teams Improved", improvers)
             with col2:
                 decliners = len(
-                    display_df[display_df["points_improved"] == False]  # noqa: E712
+                    display_df[display_df["_points_improved"] == False]  # noqa: E712
                 )
                 st.metric("Teams Declined", decliners)
             with col3:
-                avg_change = display_df["points_difference"].mean()
+                avg_change = display_df["Current vs previous points difference"].mean()
                 st.metric("Avg Points Change", f"{avg_change:.1f}")
         else:
             st.info("No data to display with current filters.")

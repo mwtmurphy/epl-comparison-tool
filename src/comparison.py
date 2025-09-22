@@ -287,10 +287,51 @@ class TeamPerformanceComparison:
         merged["points_improved"] = merged["points_difference"] > 0
         merged["goal_difference_improved"] = merged["goal_difference_change"] > 0
 
-        # Sort by points difference (best improvement first)
-        merged = merged.sort_values("points_difference", ascending=False)
+        # Filter to only include teams that played in the current season
+        # (teams with games played > 0)
+        current_games_played = (
+            merged[f"wins_{current_season}"] +
+            merged[f"draws_{current_season}"] +
+            merged[f"losses_{current_season}"]
+        )
+        merged = merged[current_games_played > 0].copy()
 
-        return merged
+        # Sort by current season points (highest first) to calculate league position
+        merged = merged.sort_values(f"points_{current_season}", ascending=False)
+
+        # Add league position (1st, 2nd, 3rd, etc.)
+        merged = merged.reset_index(drop=True)
+        merged["league_position"] = range(1, len(merged) + 1)
+
+        # Restructure columns to match requested format
+        display_df = pd.DataFrame()
+        display_df["League position"] = merged["league_position"]
+        display_df["Team name"] = merged["team"]
+        display_df["Won"] = merged[f"wins_{current_season}"].astype(int)
+        display_df["Draw"] = merged[f"draws_{current_season}"].astype(int)
+        display_df["Lost"] = merged[f"losses_{current_season}"].astype(int)
+        display_df["Goals for"] = merged[f"goals_for_{current_season}"].astype(int)
+        display_df["Goals against"] = merged[f"goals_against_{current_season}"].astype(int)
+        display_df["Goal difference"] = merged[f"goal_difference_{current_season}"].astype(int)
+        display_df["Points"] = merged[f"points_{current_season}"].astype(int)
+        display_df["Previous won"] = merged[f"wins_{comparison_season}"].astype(int)
+        display_df["Previous draw"] = merged[f"draws_{comparison_season}"].astype(int)
+        display_df["Previous lost"] = merged[f"losses_{comparison_season}"].astype(int)
+        display_df["Previous goals for"] = merged[f"goals_for_{comparison_season}"].astype(int)
+        display_df["Previous goals against"] = merged[f"goals_against_{comparison_season}"].astype(int)
+        display_df["Previous goal difference"] = merged[f"goal_difference_{comparison_season}"].astype(int)
+        display_df["Previous points"] = merged[f"points_{comparison_season}"].astype(int)
+        display_df["Current vs previous points difference"] = merged["points_difference"].astype(int)
+
+        # Keep internal columns for charts and other functionality (prefixed with _)
+        display_df["_points_improved"] = merged["points_improved"]
+        display_df["_goal_difference_improved"] = merged["goal_difference_improved"]
+        display_df["_points_percentage_change"] = merged["points_percentage_change"]
+        display_df["_goal_difference_change"] = merged["goal_difference_change"]
+        display_df["_goals_for_difference"] = merged["goals_for_difference"]
+        display_df["_goals_against_difference"] = merged["goals_against_difference"]
+
+        return display_df
 
     def get_team_comparison(
         self, team_name: str, current_season: int, comparison_season: int
@@ -308,7 +349,7 @@ class TeamPerformanceComparison:
         """
         comparison_df = self.compare_seasons(current_season, comparison_season)
 
-        team_data = comparison_df[comparison_df["team"] == team_name]
+        team_data = comparison_df[comparison_df["Team name"] == team_name]
 
         if team_data.empty:
             return {"error": f"Team '{team_name}' not found in comparison data"}
@@ -322,39 +363,37 @@ class TeamPerformanceComparison:
                 "comparison": f"{comparison_season}/{comparison_season+1}",
             },
             "current_season": {
-                "games_played": int(team_row[f"games_played_{current_season}"]),
-                "points": int(team_row[f"points_{current_season}"]),
-                "wins": int(team_row[f"wins_{current_season}"]),
-                "draws": int(team_row[f"draws_{current_season}"]),
-                "losses": int(team_row[f"losses_{current_season}"]),
-                "goals_for": int(team_row[f"goals_for_{current_season}"]),
-                "goals_against": int(team_row[f"goals_against_{current_season}"]),
-                "goal_difference": int(team_row[f"goal_difference_{current_season}"]),
+                "games_played": int(team_row["Won"] + team_row["Draw"] + team_row["Lost"]),
+                "points": int(team_row["Points"]),
+                "wins": int(team_row["Won"]),
+                "draws": int(team_row["Draw"]),
+                "losses": int(team_row["Lost"]),
+                "goals_for": int(team_row["Goals for"]),
+                "goals_against": int(team_row["Goals against"]),
+                "goal_difference": int(team_row["Goal difference"]),
             },
             "comparison_season": {
-                "games_played": int(team_row[f"games_played_{comparison_season}"]),
-                "points": int(team_row[f"points_{comparison_season}"]),
-                "wins": int(team_row[f"wins_{comparison_season}"]),
-                "draws": int(team_row[f"draws_{comparison_season}"]),
-                "losses": int(team_row[f"losses_{comparison_season}"]),
-                "goals_for": int(team_row[f"goals_for_{comparison_season}"]),
-                "goals_against": int(team_row[f"goals_against_{comparison_season}"]),
-                "goal_difference": int(
-                    team_row[f"goal_difference_{comparison_season}"]
-                ),
+                "games_played": int(team_row["Previous won"] + team_row["Previous draw"] + team_row["Previous lost"]),
+                "points": int(team_row["Previous points"]),
+                "wins": int(team_row["Previous won"]),
+                "draws": int(team_row["Previous draw"]),
+                "losses": int(team_row["Previous lost"]),
+                "goals_for": int(team_row["Previous goals for"]),
+                "goals_against": int(team_row["Previous goals against"]),
+                "goal_difference": int(team_row["Previous goal difference"]),
             },
             "differences": {
-                "points": int(team_row["points_difference"]),
-                "goal_difference": int(team_row["goal_difference_change"]),
-                "goals_for": int(team_row["goals_for_difference"]),
-                "goals_against": int(team_row["goals_against_difference"]),
+                "points": int(team_row["Current vs previous points difference"]),
+                "goal_difference": int(team_row["_goal_difference_change"]),
+                "goals_for": int(team_row["_goals_for_difference"]),
+                "goals_against": int(team_row["_goals_against_difference"]),
                 "points_percentage_change": round(
-                    float(team_row["points_percentage_change"]), 2
+                    float(team_row["_points_percentage_change"]), 2
                 ),
             },
             "improvements": {
-                "points_improved": bool(team_row["points_improved"]),
-                "goal_difference_improved": bool(team_row["goal_difference_improved"]),
+                "points_improved": bool(team_row["_points_improved"]),
+                "goal_difference_improved": bool(team_row["_goal_difference_improved"]),
             },
         }
 
@@ -380,11 +419,17 @@ class TeamPerformanceComparison:
         comparison_df = self.compare_seasons(current_season, comparison_season)
 
         if metric == "points":
-            sort_col = "points_difference"
+            sort_col = "Current vs previous points difference"
+            current_col = "Points"
+            previous_col = "Previous points"
         elif metric == "goal_difference":
-            sort_col = "goal_difference_change"
+            sort_col = "_goal_difference_change"
+            current_col = "Goal difference"
+            previous_col = "Previous goal difference"
         elif metric == "goals_for":
-            sort_col = "goals_for_difference"
+            sort_col = "_goals_for_difference"
+            current_col = "Goals for"
+            previous_col = "Previous goals for"
         else:
             raise ValueError(f"Invalid metric: {metric}")
 
@@ -394,12 +439,10 @@ class TeamPerformanceComparison:
         for _, row in top_teams.iterrows():
             results.append(
                 {
-                    "team": row["team"],
+                    "team": row["Team name"],
                     "improvement": int(row[sort_col]),
-                    "current_season_value": int(row[f"{metric}_{current_season}"]),
-                    "comparison_season_value": int(
-                        row[f"{metric}_{comparison_season}"]
-                    ),
+                    "current_season_value": int(row[current_col]),
+                    "comparison_season_value": int(row[previous_col]),
                 }
             )
 

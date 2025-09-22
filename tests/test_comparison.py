@@ -219,17 +219,22 @@ class TestTeamPerformanceComparison:
         assert len(result) == 1
         row = result.iloc[0]
 
-        assert row["team"] == "Arsenal"
-        assert row["points_difference"] == 5  # 25 - 20
-        assert row["goal_difference_change"] == 10  # 15 - 5
-        assert row["goals_for_difference"] == 5  # 30 - 25
-        assert row["goals_against_difference"] == -5  # 15 - 20
-        assert row["points_percentage_change"] == 25.0  # (5/20) * 100
-        assert row["points_improved"] == True  # noqa: E712
-        assert row["goal_difference_improved"] == True  # noqa: E712
+        assert row["Team name"] == "Arsenal"
+        assert row["League position"] == 1  # Should be 1st by points
+        assert row["Points"] == 25
+        assert row["Previous points"] == 20
+        assert row["Current vs previous points difference"] == 5  # 25 - 20
+        assert row["Goal difference"] == 15
+        assert row["Previous goal difference"] == 5
+        assert row["_goal_difference_change"] == 10  # 15 - 5
+        assert row["_goals_for_difference"] == 5  # 30 - 25
+        assert row["_goals_against_difference"] == -5  # 15 - 20
+        assert row["_points_percentage_change"] == 25.0  # (5/20) * 100
+        assert row["_points_improved"] == True  # noqa: E712
+        assert row["_goal_difference_improved"] == True  # noqa: E712
 
     def test_merge_with_missing_teams(self):
-        """Test merging when teams appear in only one season."""
+        """Test merging when teams appear in only one season - only shows Premier League teams."""
         current_performance = pd.DataFrame(
             [
                 {
@@ -266,19 +271,16 @@ class TestTeamPerformanceComparison:
             current_performance, comparison_performance, 2025, 2024
         )
 
-        assert len(result) == 2  # Both teams should appear
+        # Only shows teams that played in current season (Premier League teams)
+        assert len(result) == 1  # Only Arsenal (played current season)
 
         # Arsenal (new team, no comparison data)
-        arsenal = result[result["team"] == "Arsenal"].iloc[0]
-        assert arsenal["points_2025"] == 25
-        assert arsenal["points_2024"] == 0  # Filled with 0
-        assert arsenal["points_difference"] == 25
+        arsenal = result[result["Team name"] == "Arsenal"].iloc[0]
+        assert arsenal["Points"] == 25
+        assert arsenal["Previous points"] == 0  # Filled with 0
+        assert arsenal["Current vs previous points difference"] == 25
 
-        # Burnley (relegated team, no current data)
-        burnley = result[result["team"] == "Burnley"].iloc[0]
-        assert burnley["points_2025"] == 0  # Filled with 0
-        assert burnley["points_2024"] == 20
-        assert burnley["points_difference"] == -20
+        # Burnley is not shown as it didn't play in current season (relegated)
 
     @patch("comparison.map_fixtures_between_seasons")
     def test_compare_seasons_integration(self, mock_map_fixtures):
@@ -304,14 +306,14 @@ class TestTeamPerformanceComparison:
         result = self.comparator.compare_seasons(2025, 2024)
 
         assert len(result) >= 2  # Arsenal and Chelsea
-        assert "points_difference" in result.columns
-        assert "goal_difference_change" in result.columns
-        assert "points_improved" in result.columns
+        assert "Current vs previous points difference" in result.columns
+        assert "_goal_difference_change" in result.columns
+        assert "_points_improved" in result.columns
 
     def test_get_team_comparison_not_found(self):
         """Test team comparison when team is not found."""
         with patch.object(self.comparator, "compare_seasons") as mock_compare:
-            mock_compare.return_value = pd.DataFrame(columns=["team"])
+            mock_compare.return_value = pd.DataFrame(columns=["Team name"])
 
             result = self.comparator.get_team_comparison("NonExistent", 2025, 2024)
 
@@ -323,30 +325,29 @@ class TestTeamPerformanceComparison:
         mock_comparison_data = pd.DataFrame(
             [
                 {
-                    "team": "Arsenal",
-                    "games_played_2025": 10,
-                    "points_2025": 25,
-                    "wins_2025": 8,
-                    "draws_2025": 1,
-                    "losses_2025": 1,
-                    "goals_for_2025": 30,
-                    "goals_against_2025": 15,
-                    "goal_difference_2025": 15,
-                    "games_played_2024": 10,
-                    "points_2024": 20,
-                    "wins_2024": 6,
-                    "draws_2024": 2,
-                    "losses_2024": 2,
-                    "goals_for_2024": 25,
-                    "goals_against_2024": 20,
-                    "goal_difference_2024": 5,
-                    "points_difference": 5,
-                    "goal_difference_change": 10,
-                    "goals_for_difference": 5,
-                    "goals_against_difference": -5,
-                    "points_percentage_change": 25.0,
-                    "points_improved": True,
-                    "goal_difference_improved": True,
+                    "League position": 1,
+                    "Team name": "Arsenal",
+                    "Won": 8,
+                    "Draw": 1,
+                    "Lost": 1,
+                    "Goals for": 30,
+                    "Goals against": 15,
+                    "Goal difference": 15,
+                    "Points": 25,
+                    "Previous won": 6,
+                    "Previous draw": 2,
+                    "Previous lost": 2,
+                    "Previous goals for": 25,
+                    "Previous goals against": 20,
+                    "Previous goal difference": 5,
+                    "Previous points": 20,
+                    "Current vs previous points difference": 5,
+                    "_goal_difference_change": 10,
+                    "_goals_for_difference": 5,
+                    "_goals_against_difference": -5,
+                    "_points_percentage_change": 25.0,
+                    "_points_improved": True,
+                    "_goal_difference_improved": True,
                 }
             ]
         )
@@ -369,22 +370,22 @@ class TestTeamPerformanceComparison:
         mock_comparison_data = pd.DataFrame(
             [
                 {
-                    "team": "Arsenal",
-                    "points_difference": 10,
-                    "points_2025": 30,
-                    "points_2024": 20,
+                    "Team name": "Arsenal",
+                    "Current vs previous points difference": 10,
+                    "Points": 30,
+                    "Previous points": 20,
                 },
                 {
-                    "team": "Chelsea",
-                    "points_difference": 5,
-                    "points_2025": 25,
-                    "points_2024": 20,
+                    "Team name": "Chelsea",
+                    "Current vs previous points difference": 5,
+                    "Points": 25,
+                    "Previous points": 20,
                 },
                 {
-                    "team": "Liverpool",
-                    "points_difference": -3,
-                    "points_2025": 17,
-                    "points_2024": 20,
+                    "Team name": "Liverpool",
+                    "Current vs previous points difference": -3,
+                    "Points": 17,
+                    "Previous points": 20,
                 },
             ]
         )
